@@ -9,7 +9,6 @@ from urllib.request import urlopen
 from urllib.error import URLError
 from urllib.parse import urljoin
 
-from . import utils
 from . import remote
 
 
@@ -162,4 +161,6 @@ class Distribution(object):
         return True, 'Success'
 
     def clean_cache(self):
-        utils.clean_cache(self.repo)
+        path = os.path.join(self.repo, 'cache')
+        for x in os.listdir(path):
+            os.unlink(os.path.join(path, x))

@@ -1,14 +1,23 @@
+import os
+
 from wapkg.repo import Repository
 
 
 def main():
     repo = Repository()
-    if '3.7.2.1' not in repo.list_distributions():
-        print('Installing Battle Pack...')
-        ok, msg = repo.install_dist_from_file('../WALauncher/server/distributions/3.7.2.1-battle-pack-minimal.wadist')
+    wanted = '3.7.2.1 Battle Pack Minimal'
+
+    if wanted not in repo.list_distributions():
+        print('Downloading & installing Battle Pack...')
+        ok, msg, dist_name = repo.install_dist_by_name(wanted, repo.get_sources())
         print(msg)
         if not ok:
             return
+
+    print('Printing all installed distros:')
+    for d in repo.list_distributions():
+        print(d)
+    print('---')
 
     dist = repo.get_distribution('3.7.2.1 Battle Pack Minimal')
     if 'schemekit' in dist.list_packages():

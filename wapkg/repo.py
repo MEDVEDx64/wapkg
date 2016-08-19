@@ -4,7 +4,11 @@ import json
 import sqlite3
 
 from zipfile import ZipFile
+from urllib.request import urlopen
+from urllib.error import URLError
+from urllib.parse import urljoin
 
+from . import remote
 from .distro import Distribution
 
 DEFAULT_SETTINGS = {
@@ -21,7 +25,7 @@ class Repository(object):
             if sys.platform == 'win32':
                 self.wd = os.path.join(os.getenv('APPDATA'), 'wapkg')
             else:
-                self.wd = os.path.join(os.getcwd(), '.wapkg')
+                self.wd = os.path.join(os.getenv('HOME'), '.wapkg')
 
             if not os.path.exists(self.wd):
                 os.mkdir(self.wd)
@@ -29,6 +33,11 @@ class Repository(object):
             if not os.path.exists(sf):
                 with open(sf, 'w') as f:
                     f.write(json.dumps(DEFAULT_SETTINGS))
+
+            for x in os.listdir(self.wd):
+                p = os.path.join(self.wd, x)
+                if os.path.isfile(p) and x.endswith('.download'):
+                    os.unlink(p)
 
         self.settings = {}
         with open(os.path.join(self.wd, 'settings.json'), 'r') as f:
@@ -50,18 +59,21 @@ class Repository(object):
     def get_sources(self):
         return self.settings['sources']
 
-    def install_dist_from_file(self, path, name=None):
+    # Returns: succeeded, message, distro name
+    def install_dist_from_file(self, path, target_name=None):
+        dist_name = None
         with ZipFile(path) as zf:
             wadist = json.loads(zf.read('wadist.json').decode('utf-8'))
             if not wadist['version'] == 1:
-                return False, 'Unsupported distribution format'
+                return False, 'Unsupported distribution format', None
 
             target = wadist['suggestedName']
-            if name:
-                target = name
+            if target_name:
+                target = target_name
+            dist_name = target
             target = os.path.join(self.wd, target)
             if os.path.exists(target):
-                return False, 'A distribution with such name is already exists'
+                return False, 'A distribution with such name is already exists', None
 
             repo = os.path.join(target, '.wadist')
             os.makedirs(os.path.join(repo, 'cache'))
@@ -83,4 +95,40 @@ class Repository(object):
                     continue
                 zf.extract(n, target)
 
-        return True, 'Success'
+        return True, 'Success', dist_name
+
+    def install_dist_by_name(self, name, sources, target_name=None):
+        target = name
+        if target_name:
+            target = target_name
+        if os.path.exists(os.path.join(self.wd, target)):
+            return False, 'A distribution with such name is already exists', None
+
+        for src in sources:
+            index = remote.fetch_index(src)
+            if not index:
+                continue
+            if name not in index['distributions']:
+                continue
+
+            dist = index['distributions'][name]
+
+            if 'path' in dist or 'uri' in dist:
+                path = ''
+                if 'path' in dist:
+                    link = urljoin(src, dist['path'])
+                else:
+                    link = dist['uri']
+                try:
+                    with urlopen(link) as pkg_req:
+                        path = os.path.join(self.wd, name + '.download')
+                        with open(path, 'wb') as f:
+                            f.write(pkg_req.read())
+                except URLError:
+                    continue
+
+                ok, msg, dn = self.install_dist_from_file(path, target_name)
+                os.unlink(path)
+                return ok, msg, dn
+
+        return False, 'No suitable distro source found', None
