@@ -1,6 +1,7 @@
 import os
 import json
 import errno
+import shutil
 import sqlite3
 
 from uuid import uuid4
@@ -83,6 +84,7 @@ class Distribution(object):
         return True, 'Success'
 
     def install_package_by_name(self, name, sources):
+        revision_fail = False
         for src in sources:
             index = remote.fetch_index(src)
             if not index:
@@ -93,6 +95,7 @@ class Distribution(object):
             pkg = index['packages'][name]
             if name in self.list_packages():
                 if pkg['revision'] <= self.get_package_revision(name):
+                    revision_fail = True
                     continue
 
             if 'path' in pkg or 'uri' in pkg:
@@ -115,7 +118,10 @@ class Distribution(object):
                 self.clean_cache()
                 return inst
 
-        return False, 'No suitable package source found'
+        message = 'No suitable package source found'
+        if revision_fail:
+            message = 'The latest package revision is already installed and there is no newer one found'
+        return False, message
 
     def remove_package(self, name):
         if name not in self.list_packages():
@@ -164,3 +170,6 @@ class Distribution(object):
         path = os.path.join(self.repo, 'cache')
         for x in os.listdir(path):
             os.unlink(os.path.join(path, x))
+
+    def exterminate(self):
+        shutil.rmtree(self.wd)
