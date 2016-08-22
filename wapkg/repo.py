@@ -4,6 +4,7 @@ import json
 import ctypes
 import sqlite3
 
+from uuid import uuid4
 from zipfile import ZipFile
 from urllib.request import urlopen
 from urllib.error import URLError
@@ -126,7 +127,7 @@ class Repository(object):
                     link = dist['uri']
                 try:
                     with urlopen(link) as pkg_req:
-                        path = os.path.join(self.wd, name + '.download')
+                        path = os.path.join(self.wd, str(uuid4()) + '.download')
                         with open(path, 'wb') as f:
                             f.write(pkg_req.read())
                 except URLError:
