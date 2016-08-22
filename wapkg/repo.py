@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import ctypes
 import sqlite3
 
 from zipfile import ZipFile
@@ -78,6 +79,9 @@ class Repository(object):
 
             repo = os.path.join(target, '.wadist')
             os.makedirs(os.path.join(repo, 'cache'))
+            if sys.platform == 'win32':
+                # Setting 'hidden' attribute
+                ctypes.windll.kernel32.SetFileAttributesW(repo, 2)
             with open(os.path.join(repo, 'version'), 'w') as vf:
                 vf.write('1')
             with sqlite3.connect(os.path.join(repo, 'packages.db')) as conn:
