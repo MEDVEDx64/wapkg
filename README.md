@@ -23,3 +23,8 @@ Requirements
 ------------
 
 Python 3.
+
+Moar
+----
+
+`warun.py` - instantly run an installed distro.
