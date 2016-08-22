@@ -11,33 +11,34 @@ from urllib.parse import urljoin
 from . import remote
 from .distro import Distribution
 
-DEFAULT_SETTINGS = {
-    'sources': [
-        'https://themassacre.org/ftp/public/Worms/proto/'
-    ]
-}
-
 
 class Repository(object):
-    def __init__(self):
+    def __init__(self, default_sources=None):
         self.wd = '.'
-        if not os.path.exists('portable'):
+        if not os.path.exists('portable') or not os.path.isfile('portable'):
             if sys.platform == 'win32':
                 self.wd = os.path.join(os.getenv('APPDATA'), 'wapkg')
             else:
                 self.wd = os.path.join(os.getenv('HOME'), '.wapkg')
 
-            if not os.path.exists(self.wd):
-                os.mkdir(self.wd)
-            sf = os.path.join(self.wd, 'settings.json')
-            if not os.path.exists(sf):
-                with open(sf, 'w') as f:
-                    f.write(json.dumps(DEFAULT_SETTINGS))
+        if not os.path.exists(self.wd):
+            os.mkdir(self.wd)
+        sf = os.path.join(self.wd, 'settings.json')
+        if not os.path.exists(sf):
+            with open(sf, 'w') as f:
+                settings = {
+                    'sources': [
+                        'https://themassacre.org/worms/'
+                    ]
+                }
+                if default_sources:
+                    settings['sources'] = default_sources
+                f.write(json.dumps(settings))
 
-            for x in os.listdir(self.wd):
-                p = os.path.join(self.wd, x)
-                if os.path.isfile(p) and x.endswith('.download'):
-                    os.unlink(p)
+        for x in os.listdir(self.wd):
+            p = os.path.join(self.wd, x)
+            if os.path.isfile(p) and x.endswith('.download'):
+                os.unlink(p)
 
         self.settings = {}
         with open(os.path.join(self.wd, 'settings.json'), 'r') as f:
