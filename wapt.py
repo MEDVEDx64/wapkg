@@ -143,7 +143,9 @@ def main():
                 if not index:
                     continue
                 for pkg in index['packages']:
-                    rev = index['packages'][pkg]['revision']
+                    rev = -1
+                    if 'revision' in index['packages'][pkg]:
+                        rev = index['packages'][pkg]['revision']
                     if pkg in packages:
                         if rev > packages[pkg]:
                             packages[pkg] = rev
@@ -151,7 +153,10 @@ def main():
                         packages[pkg] = rev
 
             for x in packages:
-                print(x + ', revision ' + str(packages[x]))
+                rev_str = ', revision ' + str(packages[x])
+                if packages[x] < 0:
+                    rev_str = ' (virtual package)'
+                print(x + rev_str)
 
         else:
             print_help()

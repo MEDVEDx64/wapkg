@@ -83,16 +83,33 @@ class Distribution(object):
 
         return True, 'Success'
 
-    def install_package_by_name(self, name, sources):
+    def install_package_by_name(self, name, sources, precached_index=None):
         revision_fail = False
+        installed_any_reqs = False
         for src in sources:
-            index = remote.fetch_index(src)
+            index = precached_index
             if not index:
-                continue
+                index = remote.fetch_index(src)
+                if not index:
+                    continue
+
             if name not in index['packages']:
                 continue
 
             pkg = index['packages'][name]
+            if 'requirements' in pkg:
+                for req in pkg['requirements']:
+                    ok, msg = self.install_package_by_name(req, sources, index)
+                    if not installed_any_reqs:
+                        installed_any_reqs = ok
+
+            if 'revision' not in pkg:
+                if installed_any_reqs:
+                    return True, 'Success'
+                if 'requirements' in pkg:
+                    return False, 'This virtual package is already installed and updating is not required'
+                continue
+
             if name in self.list_packages():
                 if pkg['revision'] <= self.get_package_revision(name):
                     revision_fail = True
@@ -116,7 +133,7 @@ class Distribution(object):
         message = 'No suitable package source found'
         if revision_fail:
             message = 'The latest package revision is already installed and there is no newer one found'
-        return False, message
+        return revision_fail and installed_any_reqs, message
 
     def remove_package(self, name):
         if name not in self.list_packages():
