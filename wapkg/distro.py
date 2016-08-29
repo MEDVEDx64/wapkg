@@ -6,11 +6,11 @@ import sqlite3
 
 from uuid import uuid4
 from zipfile import ZipFile
-from urllib.request import urlopen
 from urllib.error import URLError
 from urllib.parse import urljoin
 
 from . import remote
+from .download import Downloader
 
 
 class Distribution(object):
@@ -99,18 +99,13 @@ class Distribution(object):
                     continue
 
             if 'path' in pkg or 'uri' in pkg:
-                link = ''
-                path = ''
-
                 if 'path' in pkg:
                     link = urljoin(src, pkg['path'])
                 else:
                     link = pkg['uri']
+                path = os.path.join(self.repo, 'cache', str(uuid4()))
                 try:
-                    with urlopen(link) as pkg_req:
-                        path = os.path.join(self.repo, 'cache', str(uuid4()))
-                        with open(path, 'wb') as f:
-                            f.write(pkg_req.read())
+                    Downloader().go(link, path)
                 except URLError:
                     continue
 

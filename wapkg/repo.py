@@ -6,12 +6,12 @@ import sqlite3
 
 from uuid import uuid4
 from zipfile import ZipFile
-from urllib.request import urlopen
 from urllib.error import URLError
 from urllib.parse import urljoin
 
 from . import remote
 from .distro import Distribution
+from .download import Downloader
 
 
 class Repository(object):
@@ -120,16 +120,13 @@ class Repository(object):
             dist = index['distributions'][name]
 
             if 'path' in dist or 'uri' in dist:
-                path = ''
                 if 'path' in dist:
                     link = urljoin(src, dist['path'])
                 else:
                     link = dist['uri']
+                path = os.path.join(self.wd, str(uuid4()) + '.download')
                 try:
-                    with urlopen(link) as pkg_req:
-                        path = os.path.join(self.wd, str(uuid4()) + '.download')
-                        with open(path, 'wb') as f:
-                            f.write(pkg_req.read())
+                    Downloader().go(link, path)
                 except URLError:
                     continue
 
