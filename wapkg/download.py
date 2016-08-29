@@ -1,3 +1,5 @@
+import hashlib
+
 from sys import stdout
 from urllib.request import urlopen
 
@@ -5,6 +7,7 @@ from urllib.request import urlopen
 class Downloader(object):
     def __init__(self, quiet=False):
         self.quiet = quiet
+        self._last_path = None
 
     # URLError is thrown in case of errors
     def go(self, link, path):
@@ -30,3 +33,20 @@ class Downloader(object):
                             break
 
                     print()  # newline
+                    self._last_path = path
+
+        return self
+
+    # Raises RuntimeError when verifying fails
+    def _verify(self, hexdigest, algo):
+        if not hexdigest or not self._last_path:
+            return
+
+        hash = hashlib.new(algo)
+        with open(self._last_path, 'rb') as f:
+            hash.update(f.read())
+        if not hash.hexdigest() == hexdigest:
+            raise RuntimeError('Checksum does not match')
+
+    def verify_sha1(self, hexdigest):
+        self._verify(hexdigest, 'sha1')

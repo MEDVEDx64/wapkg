@@ -125,8 +125,11 @@ class Repository(object):
                 else:
                     link = dist['uri']
                 path = os.path.join(self.wd, str(uuid4()) + '.download')
+                hexdigest = None
+                if 'sha1' in dist:
+                    hexdigest = dist['sha1']
                 try:
-                    Downloader().go(link, path)
+                    Downloader().go(link, path).verify_sha1(hexdigest)
                 except URLError:
                     continue
 

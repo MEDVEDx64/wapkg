@@ -120,9 +120,13 @@ class Distribution(object):
                     link = urljoin(src, pkg['path'])
                 else:
                     link = pkg['uri']
+
                 path = os.path.join(self.repo, 'cache', str(uuid4()))
+                hexdigest = None
+                if 'sha1' in pkg:
+                    hexdigest = pkg['sha1']
                 try:
-                    Downloader().go(link, path)
+                    Downloader().go(link, path).verify_sha1(hexdigest)
                 except URLError:
                     continue
 
