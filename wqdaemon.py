@@ -3,6 +3,8 @@
 # WapkgQuack (wq) service daemon
 # for asynchronous GUI interaction, etc.
 
+import os
+
 from sys import argv
 from socket import *
 from select import select
@@ -40,6 +42,47 @@ class WQPacketHandler(object):
                 msg += pkg + ':' + str(dist_obj.get_package_revision(pkg)) + '\n'
             send(msg)
 
+        def send_dists_changed():
+            msg = 'quack!dists-changed\n'
+            for d in self._repo.list_distributions():
+                msg += d + '\n'
+            send(msg)
+
+        def send_packages_available():
+            packages = {}
+            for index in self._index_cache:
+                for pkg in index['packages']:
+                    rev = -1
+                    if 'revision' in index['packages'][pkg]:
+                        rev = index['packages'][pkg]['revision']
+                    if pkg in packages:
+                        if rev > packages[pkg]:
+                            packages[pkg] = rev
+                    else:
+                        packages[pkg] = rev
+
+            msg = 'quack!packages-available\n'
+            for pkg in packages:
+                rev = 'virtual'
+                if packages[pkg] >= 0:
+                    rev = str(packages[pkg])
+                msg += pkg + ':' + rev + '\n'
+
+            send(msg)
+
+        def send_dists_available():
+            dists = []
+            for index in self._index_cache:
+                for dist in index['distributions']:
+                    if dist not in dists:
+                        dists.append(dist)
+
+            msg = 'quack!dists-available\n'
+            for dist in dists:
+                msg += dist + '\n'
+
+            send(msg)
+
         def handler_thread():
             msg, addr = packet
             msg = msg.decode('utf-8')
@@ -70,21 +113,63 @@ class WQPacketHandler(object):
                         self._index_cache.append(index)
 
             elif req == 'install':
-                if wqargs[1] not in self._repo.list_distributions():
-                    send_text('No such distro installed: ' + wqargs[1])
-                    return
-
                 packages_installed = False
+                dist = self._repo.get_distribution(wqargs[1])
+
                 for pkg in wqargs[2:]:
-                    ok, msg = self._repo.get_distribution(
-                        wqargs[1]).install_package_by_name(pkg, self._repo.get_sources())
+                    if os.path.exists(pkg) and os.path.isfile(pkg):
+                        ok, msg = dist.install_package_from_file(pkg)
+                    else:
+                        ok, msg = dist.install_package_by_name(pkg, self._repo.get_sources())
                     if ok:
                         packages_installed = True
                     else:
-                        send_text('package installation error (' + pkg + '): ' + msg)
+                        send_text('Package installation error (' + pkg + '): ' + msg)
 
                 if packages_installed:
                     send_packages_changed(wqargs[1])
+
+            elif req == 'remove':
+                packages_removed = False
+                for pkg in wqargs[2:]:
+                    ok, msg = self._repo.get_distribution(wqargs[1]).remove_package(pkg)
+                    if ok:
+                        packages_removed = True
+                    else:
+                        send_text('Package removal error (' + pkg + '): ' + msg)
+
+                if packages_removed:
+                    send_packages_changed(wqargs[1])
+
+            elif req == 'dist-install':
+                dists_installed = False
+                suggested_name = None
+                if len(wqargs) > 2:
+                    suggested_name = wqargs[2]
+
+                if os.path.exists(wqargs[1]) and os.path.isfile(wqargs[1]):
+                    ok, msg, dn = self._repo.install_dist_from_file(wqargs[1], suggested_name)
+                else:
+                    ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(), suggested_name)
+                if ok:
+                    dists_installed = True
+                else:
+                    send_text('Distro installation error (' + wqargs[1] + '): ' + msg)
+
+                if dists_installed:
+                    send_dists_changed()
+
+            elif req == 'packages':
+                send_packages_changed(wqargs[1])
+
+            elif req == 'packages-available':
+                send_packages_available()
+
+            elif req == 'dists':
+                send_dists_changed()
+
+            elif req == 'dists-available':
+                send_dists_available()
 
         Thread(target=handler_thread).start()
 
