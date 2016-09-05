@@ -113,43 +113,61 @@ class WQPacketHandler(object):
                         self._index_cache.append(index)
 
             elif req == 'install':
-                packages_installed = False
+                packages_installed = 0
+                recent_package = None
                 dist = self._repo.get_distribution(wqargs[1])
 
                 for pkg in wqargs[2:]:
                     if os.path.exists(pkg) and os.path.isfile(pkg):
+                        send_text("+ Installing package '" + pkg + "'...")
                         ok, msg = dist.install_package_from_file(pkg)
                     else:
+                        send_text("+ Downloading and installing '" + pkg + "'...")
                         ok, msg = dist.install_package_by_name(pkg, self._repo.get_sources())
                     if ok:
-                        packages_installed = True
+                        packages_installed += 1
+                        recent_package = pkg
                     else:
-                        send_text('Package installation error (' + pkg + '): ' + msg)
+                        send_text('! Package installation error (' + pkg + '): ' + msg)
 
                 if packages_installed:
+                    if packages_installed > 1:
+                        send_text('Installed ' + str(packages_installed) + " packages into distro '" + dist + "'")
+                    elif packages_installed == 1:
+                        send_text("Installed package '" + recent_package + " into distro '" + dist + "'")
                     send_packages_changed(wqargs[1])
 
             elif req == 'remove':
-                packages_removed = False
+                packages_removed = 0
+                recent_package = None
                 for pkg in wqargs[2:]:
                     ok, msg = self._repo.get_distribution(wqargs[1]).remove_package(pkg)
                     if ok:
-                        packages_removed = True
+                        packages_removed += 1
+                        recent_package = pkg
                     else:
-                        send_text('Package removal error (' + pkg + '): ' + msg)
+                        send_text('! Package removal error (' + pkg + '): ' + msg)
 
                 if packages_removed:
+                    if packages_removed > 1:
+                        send_text('Removed ' + str(packages_removed) + " packages from distro '" + wqargs[1] + "'")
+                    elif packages_removed == 1:
+                        send_text("Removed package '" + recent_package + " from distro '" + wqargs[1] + "'")
                     send_packages_changed(wqargs[1])
 
             elif req == 'dist-install':
                 dists_installed = False
                 suggested_name = None
+                installed_as = ''
                 if len(wqargs) > 2:
                     suggested_name = wqargs[2]
+                    installed_as = " as '" + suggested_name + "'"
 
                 if os.path.exists(wqargs[1]) and os.path.isfile(wqargs[1]):
+                    send_text("+ Installing '" + wqargs[1] + "'...")
                     ok, msg, dn = self._repo.install_dist_from_file(wqargs[1], suggested_name)
                 else:
+                    send_text("+ Downloading and installing '" + wqargs[1] + "'...")
                     ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(), suggested_name)
                 if ok:
                     dists_installed = True
@@ -157,6 +175,7 @@ class WQPacketHandler(object):
                     send_text('Distro installation error (' + wqargs[1] + '): ' + msg)
 
                 if dists_installed:
+                    send_text("Installed distro '" + wqargs[1] + "'" + installed_as)
                     send_dists_changed()
 
             elif req == 'packages':
