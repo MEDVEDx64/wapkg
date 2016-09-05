@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from sys import argv, platform
+from sys import argv, platform, exit
 from wapkg.repo import Repository
 
 usage = 'Usage: ' + argv[0] + ' <distro> [args ...]'
