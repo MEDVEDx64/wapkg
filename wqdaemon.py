@@ -171,6 +171,9 @@ class WQPacketHandler(object):
             elif req == 'dists-available':
                 send_dists_available()
 
+            elif req == 'wd':
+                send('quack!wd\n' + self._repo.wd + '\n')
+
         Thread(target=handler_thread).start()
 
 
