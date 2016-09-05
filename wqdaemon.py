@@ -85,7 +85,7 @@ class WQPacketHandler(object):
 
         def handler_thread():
             msg, addr = packet
-            msg = msg.decode('utf-8')
+            msg = msg.decode('utf-8').split('\n')[0]
             if not msg.startswith('wq/0.1'):
                 return
 
