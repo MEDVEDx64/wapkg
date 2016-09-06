@@ -112,6 +112,8 @@ class WQPacketHandler(object):
                     if index:
                         self._index_cache.append(index)
 
+                send('quack!index-changed\n')
+
             elif req == 'install':
                 packages_installed = 0
                 recent_package = None
