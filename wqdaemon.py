@@ -134,9 +134,9 @@ class WQPacketHandler(object):
 
                 if packages_installed:
                     if packages_installed > 1:
-                        send_text('Installed ' + str(packages_installed) + " packages into distro '" + dist + "'")
+                        send_text('Installed ' + str(packages_installed) + " packages into distro '" + wqargs[1] + "'")
                     elif packages_installed == 1:
-                        send_text("Installed package '" + recent_package + " into distro '" + dist + "'")
+                        send_text("Installed package '" + recent_package + " into distro '" + wqargs[1] + "'")
                     send_packages_changed(wqargs[1])
 
             elif req == 'remove':
