@@ -89,7 +89,7 @@ class WQPacketHandler(object):
             if not msg.startswith('wq/0.1'):
                 return
 
-            wqargs = msg.split(':')[1:]
+            wqargs = msg.split(';')[1:]
             req = wqargs[0]
 
             if req == 'subscribe':
