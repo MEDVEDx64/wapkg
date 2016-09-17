@@ -103,7 +103,7 @@ class Repository(object):
 
         return True, 'Success', dist_name
 
-    def install_dist_by_name(self, name, sources, target_name=None):
+    def install_dist_by_name(self, name, sources, target_name=None, action=None):
         target = name
         if target_name:
             target = target_name
@@ -129,7 +129,7 @@ class Repository(object):
                 if 'sha1' in dist:
                     hexdigest = dist['sha1']
                 try:
-                    Downloader().go(link, path).verify_sha1(hexdigest)
+                    Downloader().go(link, path, action).verify_sha1(hexdigest)
                 except URLError:
                     continue
 

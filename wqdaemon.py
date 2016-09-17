@@ -11,6 +11,7 @@ from select import select
 from threading import Thread
 from wapkg.repo import Repository
 from wapkg.remote import fetch_index
+from wapkg.download import DownloadAction
 
 help_message = '''
 WapkgQuack service daemon
@@ -82,6 +83,13 @@ class WQPacketHandler(object):
                 msg += dist + '\n'
 
             send(msg)
+
+        def send_action_complete(token):
+            send('quack!action-complete\n' + token + '\n')
+
+        class DistroDownloadAction(DownloadAction):
+            def update_progress(self, current, total):
+                send('quack!action-update\n' + self.token + '\n' + str(current) + '\n' + str(total) + '\n')
 
         def handler_thread():
             msg, addr = packet
@@ -160,17 +168,26 @@ class WQPacketHandler(object):
             elif req == 'dist-install':
                 dists_installed = False
                 suggested_name = None
+                action_token = None
                 installed_as = ''
+
                 if len(wqargs) > 2:
                     suggested_name = wqargs[2]
                     installed_as = " as '" + suggested_name + "'"
+
+                if len(wqargs) > 3:
+                    action_token = wqargs[3]
 
                 if os.path.exists(wqargs[1]) and os.path.isfile(wqargs[1]):
                     send_text("+ Installing '" + wqargs[1] + "'...")
                     ok, msg, dn = self._repo.install_dist_from_file(wqargs[1], suggested_name)
                 else:
+                    action = None
+                    if action_token:
+                        action = DistroDownloadAction(action_token)
                     send_text("+ Downloading and installing '" + wqargs[1] + "'...")
-                    ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(), suggested_name)
+                    ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(),
+                                                                  suggested_name, action)
                 if ok:
                     dists_installed = True
                 else:
@@ -179,6 +196,9 @@ class WQPacketHandler(object):
                 if dists_installed:
                     send_text("Installed distro '" + wqargs[1] + "'" + installed_as)
                     send_dists_changed()
+
+                if action_token:
+                    send_action_complete(action_token)
 
             elif req == 'packages':
                 send_packages_changed(wqargs[1])
