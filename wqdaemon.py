@@ -5,7 +5,7 @@
 
 import os
 
-from sys import argv
+from sys import argv, stdout
 from socket import *
 from select import select
 from threading import Thread
@@ -237,6 +237,9 @@ def main():
     try:
         srv_socket.bind((lsn_addr, lsn_port))
         srv_socket.setblocking(0)
+        print('ready')
+        stdout.flush()
+
         while True:
             if select([srv_socket], [], [], 1)[0]:  # one second timeout
                 handler.handle(srv_socket.recvfrom(65536))
