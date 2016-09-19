@@ -5,7 +5,7 @@
 
 import os
 
-from sys import argv, stdout
+from sys import argv, stdout, exc_info
 from socket import *
 from select import select
 from threading import Thread
@@ -92,128 +92,134 @@ class WQPacketHandler(object):
                 send('quack!action-update\n' + self.token + '\n' + str(current) + '\n' + str(total) + '\n')
 
         def handler_thread():
-            msg, addr = packet
-            msg = msg.decode('utf-8').split('\n')[0]
-            if not msg.startswith('wq/0.1'):
-                return
-
-            wqargs = msg.split(';')[1:]
-            req = wqargs[0]
-
-            if req == 'subscribe':
-                ad = wqargs[1], int(wqargs[2])
-                if not ad[0] == addr[0]:
+            try:
+                msg, addr = packet
+                msg = msg.decode('utf-8').split('\n')[0]
+                if not msg.startswith('wq/0.1'):
                     return
-                if ad not in self._addrs:
-                    self._addrs.append(ad)
-                return
 
-            elif req == 'unsubscribe':
-                ad = wqargs[1], int(wqargs[2])
-                if ad in self._addrs:
-                    self._addrs.remove(ad)
+                wqargs = msg.split(';')[1:]
+                req = wqargs[0]
 
-            elif req == 'update-index':
-                self._index_cache.clear()
-                for src in self._repo.get_sources():
-                    index = fetch_index(src)
-                    if index:
-                        self._index_cache.append(index)
+                if req == 'subscribe':
+                    ad = wqargs[1], int(wqargs[2])
+                    if not ad[0] == addr[0]:
+                        return
+                    if ad not in self._addrs:
+                        self._addrs.append(ad)
+                    return
 
-                send('quack!index-changed\n')
+                elif req == 'unsubscribe':
+                    ad = wqargs[1], int(wqargs[2])
+                    if ad in self._addrs:
+                        self._addrs.remove(ad)
 
-            elif req == 'install':
-                packages_installed = 0
-                recent_package = None
-                dist = self._repo.get_distribution(wqargs[1])
+                elif req == 'update-index':
+                    self._index_cache.clear()
+                    for src in self._repo.get_sources():
+                        index = fetch_index(src)
+                        if index:
+                            self._index_cache.append(index)
 
-                for pkg in wqargs[2:]:
-                    if os.path.exists(pkg) and os.path.isfile(pkg):
-                        send_text("+ Installing package '" + pkg + "'...")
-                        ok, msg = dist.install_package_from_file(pkg)
+                    send('quack!index-changed\n')
+
+                elif req == 'install':
+                    packages_installed = 0
+                    recent_package = None
+                    dist = self._repo.get_distribution(wqargs[1])
+
+                    for pkg in wqargs[2:]:
+                        if os.path.exists(pkg) and os.path.isfile(pkg):
+                            send_text("+ Installing package '" + pkg + "'...")
+                            ok, msg = dist.install_package_from_file(pkg)
+                        else:
+                            send_text("+ Downloading and installing '" + pkg + "'...")
+                            ok, msg = dist.install_package_by_name(pkg, self._repo.get_sources())
+                        if ok:
+                            packages_installed += 1
+                            recent_package = pkg
+                        else:
+                            send_text('! Package installation error (' + pkg + '): ' + msg)
+
+                    if packages_installed:
+                        if packages_installed > 1:
+                            send_text('Installed ' + str(packages_installed) +
+                                      " packages into distro '" + wqargs[1] + "'")
+                        elif packages_installed == 1:
+                            send_text("Installed package '" + recent_package + " into distro '" + wqargs[1] + "'")
+                        send_packages_changed(wqargs[1])
+
+                elif req == 'remove':
+                    packages_removed = 0
+                    recent_package = None
+                    for pkg in wqargs[2:]:
+                        ok, msg = self._repo.get_distribution(wqargs[1]).remove_package(pkg)
+                        if ok:
+                            packages_removed += 1
+                            recent_package = pkg
+                        else:
+                            send_text('! Package removal error (' + pkg + '): ' + msg)
+
+                    if packages_removed:
+                        if packages_removed > 1:
+                            send_text('Removed ' + str(packages_removed) + " packages from distro '" + wqargs[1] + "'")
+                        elif packages_removed == 1:
+                            send_text("Removed package '" + recent_package + " from distro '" + wqargs[1] + "'")
+                        send_packages_changed(wqargs[1])
+
+                elif req == 'dist-install':
+                    dists_installed = False
+                    suggested_name = None
+                    action_token = None
+                    installed_as = ''
+
+                    if len(wqargs) > 2:
+                        suggested_name = wqargs[2]
+                        installed_as = " as '" + suggested_name + "'"
+
+                    if len(wqargs) > 3:
+                        action_token = wqargs[3]
+
+                    if os.path.exists(wqargs[1]) and os.path.isfile(wqargs[1]):
+                        send_text("+ Installing '" + wqargs[1] + "'...")
+                        ok, msg, dn = self._repo.install_dist_from_file(wqargs[1], suggested_name)
                     else:
-                        send_text("+ Downloading and installing '" + pkg + "'...")
-                        ok, msg = dist.install_package_by_name(pkg, self._repo.get_sources())
+                        action = None
+                        if action_token:
+                            action = DistroDownloadAction(action_token)
+                        send_text("+ Downloading and installing '" + wqargs[1] + "'...")
+                        ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(),
+                                                                      suggested_name, action)
                     if ok:
-                        packages_installed += 1
-                        recent_package = pkg
+                        dists_installed = True
                     else:
-                        send_text('! Package installation error (' + pkg + '): ' + msg)
+                        send_text('Distro installation error (' + wqargs[1] + '): ' + msg)
 
-                if packages_installed:
-                    if packages_installed > 1:
-                        send_text('Installed ' + str(packages_installed) + " packages into distro '" + wqargs[1] + "'")
-                    elif packages_installed == 1:
-                        send_text("Installed package '" + recent_package + " into distro '" + wqargs[1] + "'")
-                    send_packages_changed(wqargs[1])
+                    if dists_installed:
+                        send_text("Installed distro '" + wqargs[1] + "'" + installed_as)
+                        send_dists_changed()
 
-            elif req == 'remove':
-                packages_removed = 0
-                recent_package = None
-                for pkg in wqargs[2:]:
-                    ok, msg = self._repo.get_distribution(wqargs[1]).remove_package(pkg)
-                    if ok:
-                        packages_removed += 1
-                        recent_package = pkg
-                    else:
-                        send_text('! Package removal error (' + pkg + '): ' + msg)
-
-                if packages_removed:
-                    if packages_removed > 1:
-                        send_text('Removed ' + str(packages_removed) + " packages from distro '" + wqargs[1] + "'")
-                    elif packages_removed == 1:
-                        send_text("Removed package '" + recent_package + " from distro '" + wqargs[1] + "'")
-                    send_packages_changed(wqargs[1])
-
-            elif req == 'dist-install':
-                dists_installed = False
-                suggested_name = None
-                action_token = None
-                installed_as = ''
-
-                if len(wqargs) > 2:
-                    suggested_name = wqargs[2]
-                    installed_as = " as '" + suggested_name + "'"
-
-                if len(wqargs) > 3:
-                    action_token = wqargs[3]
-
-                if os.path.exists(wqargs[1]) and os.path.isfile(wqargs[1]):
-                    send_text("+ Installing '" + wqargs[1] + "'...")
-                    ok, msg, dn = self._repo.install_dist_from_file(wqargs[1], suggested_name)
-                else:
-                    action = None
                     if action_token:
-                        action = DistroDownloadAction(action_token)
-                    send_text("+ Downloading and installing '" + wqargs[1] + "'...")
-                    ok, msg, dn = self._repo.install_dist_by_name(wqargs[1], self._repo.get_sources(),
-                                                                  suggested_name, action)
-                if ok:
-                    dists_installed = True
-                else:
-                    send_text('Distro installation error (' + wqargs[1] + '): ' + msg)
+                        send_action_complete(action_token)
 
-                if dists_installed:
-                    send_text("Installed distro '" + wqargs[1] + "'" + installed_as)
+                elif req == 'packages':
+                    send_packages_changed(wqargs[1])
+
+                elif req == 'packages-available':
+                    send_packages_available()
+
+                elif req == 'dists':
                     send_dists_changed()
 
-                if action_token:
-                    send_action_complete(action_token)
+                elif req == 'dists-available':
+                    send_dists_available()
 
-            elif req == 'packages':
-                send_packages_changed(wqargs[1])
+                elif req == 'wd':
+                    send('quack!wd\n' + self._repo.wd + '\n')
 
-            elif req == 'packages-available':
-                send_packages_available()
-
-            elif req == 'dists':
-                send_dists_changed()
-
-            elif req == 'dists-available':
-                send_dists_available()
-
-            elif req == 'wd':
-                send('quack!wd\n' + self._repo.wd + '\n')
+            except:
+                send_text('Unexcepted error: ' + str(exc_info()[1]))
+                raise
 
         Thread(target=handler_thread).start()
 
