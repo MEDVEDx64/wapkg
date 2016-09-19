@@ -51,7 +51,7 @@ class Downloader(object):
         hash = hashlib.new(algo)
         with open(self._last_path, 'rb') as f:
             hash.update(f.read())
-        if not hash.hexdigest() == hexdigest:
+        if not hash.hexdigest() == hexdigest.lower():
             raise RuntimeError('Checksum does not match')
 
     def verify_sha1(self, hexdigest):
