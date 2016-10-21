@@ -25,9 +25,9 @@ class Repository(object):
 
         if not os.path.exists(self.wd):
             os.mkdir(self.wd)
-        sf = os.path.join(self.wd, 'settings.json')
-        if not os.path.exists(sf):
-            with open(sf, 'w') as f:
+        self.sf = os.path.join(self.wd, 'settings.json')
+        if not os.path.exists(self.sf):
+            with open(self.sf, 'w') as f:
                 settings = {
                     'sources': [
                         'https://themassacre.org/worms/'
@@ -43,7 +43,7 @@ class Repository(object):
                 os.unlink(p)
 
         self.settings = {}
-        with open(os.path.join(self.wd, 'settings.json'), 'r') as f:
+        with open(self.sf, 'r') as f:
             self.settings = json.loads(f.read())
         if 'path' in self.settings:
             self.wd = self.settings['path']
@@ -138,3 +138,7 @@ class Repository(object):
                 return ok, msg, dn
 
         return False, 'No suitable distro source found', None
+
+    def write_settings(self):
+        with open(self.sf, 'w+') as f:
+            f.write(json.dumps(self.settings))

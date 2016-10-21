@@ -87,6 +87,13 @@ class WQPacketHandler(object):
         def send_action_complete(token):
             send('quack!action-complete\n' + token + '\n')
 
+        def send_sources_changed():
+            sources = ''
+            for src in self._repo.settings['sources']:
+                sources += '\n' + src
+
+            send('quack!sources-changed' + sources + '\n')
+
         class DistroDownloadAction(DownloadAction):
             def update_progress(self, current, total):
                 send('quack!action-update\n' + self.token + '\n' + str(current) + '\n' + str(total) + '\n')
@@ -98,7 +105,11 @@ class WQPacketHandler(object):
                 if not msg.startswith('wq/0.1'):
                     return
 
-                wqargs = msg.split(';')[1:]
+                wqargs = []
+                for x in msg.split(';')[1:]:
+                    if len(x.strip()) > 0:
+                        wqargs.append(x)
+
                 req = wqargs[0]
 
                 if req == 'subscribe':
@@ -216,6 +227,17 @@ class WQPacketHandler(object):
 
                 elif req == 'wd':
                     send('quack!wd\n' + self._repo.wd + '\n')
+
+                elif req == 'sources':
+                    send_sources_changed()
+
+                elif req == 'push-sources':
+                    self._repo.settings['sources'] = []
+                    for src in wqargs[1:]:
+                        self._repo.settings['sources'].append(src)
+
+                    self._repo.write_settings()
+                    send_sources_changed()
 
             except:
                 send_text('Unexcepted error: ' + str(exc_info()[1]))
