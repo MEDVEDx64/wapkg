@@ -35,7 +35,7 @@ class Repository(object):
                 }
                 if default_sources:
                     settings['sources'] = default_sources
-                f.write(json.dumps(settings))
+                f.write(json.dumps(settings, indent=4))
 
         for x in os.listdir(self.wd):
             p = os.path.join(self.wd, x)
@@ -141,4 +141,4 @@ class Repository(object):
 
     def write_settings(self):
         with open(self.sf, 'w+') as f:
-            f.write(json.dumps(self.settings))
+            f.write(json.dumps(self.settings, sort_keys=True, indent=4))
