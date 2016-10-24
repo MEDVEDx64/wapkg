@@ -94,6 +94,15 @@ class WQPacketHandler(object):
 
             send('quack!sources-changed' + sources + '\n')
 
+        def update_index():
+            self._index_cache.clear()
+            for src in self._repo.get_sources():
+                index = fetch_index(src)
+                if index:
+                    self._index_cache.append(index)
+
+            send('quack!index-changed\n')
+
         class DistroDownloadAction(DownloadAction):
             def update_progress(self, current, total):
                 send('quack!action-update\n' + self.token + '\n' + str(current) + '\n' + str(total) + '\n')
@@ -126,13 +135,7 @@ class WQPacketHandler(object):
                         self._addrs.remove(ad)
 
                 elif req == 'update-index':
-                    self._index_cache.clear()
-                    for src in self._repo.get_sources():
-                        index = fetch_index(src)
-                        if index:
-                            self._index_cache.append(index)
-
-                    send('quack!index-changed\n')
+                    update_index()
 
                 elif req == 'install':
                     packages_installed = 0
@@ -238,6 +241,7 @@ class WQPacketHandler(object):
 
                     self._repo.write_settings()
                     send_sources_changed()
+                    update_index()
 
             except:
                 send_text('Unexcepted error: ' + str(exc_info()[1]))
