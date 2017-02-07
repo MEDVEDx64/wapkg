@@ -12,12 +12,17 @@ from urllib.parse import urljoin
 from . import remote
 from .download import Downloader
 
+from _3rdparty.fileversion import calcversioninfo
+
 
 class Distribution(object):
     def __init__(self, path):
         self.wd = path
         self.repo = os.path.join(path, '.wadist')
         self.pkgdb = os.path.join(self.repo, 'packages.db')
+
+        self._version_string_cached = False
+        self._version_string = None
 
         if not os.path.exists(self.repo):
             raise RuntimeError('The path specified does not exist (or not a distro)')
@@ -30,6 +35,14 @@ class Distribution(object):
 
     def get_name(self):
         return self.wd.split(os.sep)[-1]
+
+    # Returns None when no data found
+    def get_version_string(self):
+        if not self._version_string_cached:
+            self._version_string = calcversioninfo(os.path.join(self.wd, 'WA.exe'))
+            self._version_string_cached = True
+
+        return self._version_string
 
     # Returns list of names
     def list_packages(self):
@@ -97,6 +110,19 @@ class Distribution(object):
                 continue
 
             pkg = index['packages'][name]
+            if 'switch' in pkg:
+                ver = self.get_version_string()
+                if not ver:
+                    continue
+
+                sw = pkg['switch']
+                if ver in sw:
+                    pkg = sw[ver]
+                elif '*' in sw:
+                    pkg = sw['*']
+                else:
+                    continue
+
             if 'requirements' in pkg:
                 for req in pkg['requirements']:
                     ok, msg = self.install_package_by_name(req, sources, index)

@@ -4,7 +4,7 @@ from urllib.request import urlopen
 from urllib.error import URLError
 from urllib.parse import urljoin
 
-VERSION_REQUIRED = 2
+VERSION_REQUIRED = 3
 
 
 # Returns repo index dictionary object, or None in case of failure
