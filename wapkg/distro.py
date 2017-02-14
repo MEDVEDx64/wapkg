@@ -109,19 +109,9 @@ class Distribution(object):
             if name not in index['packages']:
                 continue
 
-            pkg = index['packages'][name]
-            if 'switch' in pkg:
-                ver = self.get_version_string()
-                if not ver:
-                    continue
-
-                sw = pkg['switch']
-                if ver in sw:
-                    pkg = sw[ver]
-                elif '*' in sw:
-                    pkg = sw['*']
-                else:
-                    continue
+            pkg = remote.select_pkg(index['packages'][name], self.get_version_string())
+            if not pkg:
+                continue
 
             if 'requirements' in pkg:
                 for req in pkg['requirements']:

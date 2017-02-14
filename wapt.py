@@ -5,8 +5,8 @@
 import os
 
 from sys import argv
+from wapkg import remote
 from wapkg.repo import Repository
-from wapkg.remote import fetch_index
 
 help_msg = """
 Worms Armageddon Packaging Tool (wapt)
@@ -20,7 +20,7 @@ Manage multiple W:A versions (a.k.a. distributions) and easily add packages to t
 """ + argv[0] + """ dist-exterminate <distro> - uninstall distribuion
 
 """ + argv[0] + """ packages <distro> - list installed packages
-""" + argv[0] + """ packages-available - list packages available for download
+""" + argv[0] + """ packages-available <distro> - list packages available for download
 """ + argv[0] + """ dists - list installed distributions
 """ + argv[0] + """ dists-available - list distribuions available for download
 
@@ -125,7 +125,7 @@ def main():
             sources = Repository().get_sources()
             dists = []
             for src in sources:
-                index = fetch_index(src)
+                index = remote.fetch_index(src)
                 if not index:
                     continue
                 for d in index['distributions']:
@@ -136,16 +136,29 @@ def main():
                 print(x)
 
         elif cmd == 'packages-available':
-            sources = Repository().get_sources()
+            repo = Repository()
+            if argv[2] not in repo.list_distributions():
+                print("Distribution '" + argv[2] + "' is not installed.")
+                return
+
+            dist = repo.get_distribution(argv[2])
+            sources = repo.get_sources()
             packages = {}
+            pkgs_bundle = []
+
             for src in sources:
-                index = fetch_index(src)
+                index = remote.fetch_index(src)
                 if not index:
                     continue
-                for pkg in index['packages']:
+                pkgs = index['packages']
+                pkgs_bundle.append(pkgs)
+                for pkg in pkgs:
                     rev = -1
-                    if 'revision' in index['packages'][pkg]:
-                        rev = index['packages'][pkg]['revision']
+                    pkg_ = remote.select_pkg(index['packages'][pkg], dist.get_version_string())
+                    if not pkg_:
+                        continue
+                    if 'revision' in pkg_:
+                        rev = pkg_['revision']
                     if pkg in packages:
                         if rev > packages[pkg]:
                             packages[pkg] = rev
@@ -153,6 +166,8 @@ def main():
                         packages[pkg] = rev
 
             for x in packages:
+                if not remote.trace_pkg_deps(pkgs_bundle, dist.get_version_string(), x):
+                    continue
                 rev_str = ', revision ' + str(packages[x])
                 if packages[x] < 0:
                     rev_str = ' (virtual package)'

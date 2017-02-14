@@ -24,3 +24,43 @@ def fetch_index(repo_url):
         return None
 
     return index
+
+
+# Unwraps the 'switch' content
+def select_pkg(pkg, vs):
+    if not pkg:
+        return None
+
+    if 'switch' in pkg:
+        if not vs:
+            return None
+
+        switch = pkg['switch']
+        if vs in switch:
+            return switch[vs]
+        elif '*' in switch:
+            return switch['*']
+        else:
+            return None
+
+    return pkg
+
+
+# Returns True if package and all it's dependencies can be successfully installed
+def trace_pkg_deps(pkgs_bundle, vs, name):
+    pkg = None
+    for pkgs in pkgs_bundle:
+        if name in pkgs:
+            pkg = pkgs[name]
+            break
+
+    pkg = select_pkg(pkg, vs)
+    if not pkg:
+        return False
+
+    if 'requirements' in pkg:
+        for req in pkg['requirements']:
+            if not trace_pkg_deps(pkgs_bundle, vs, req):
+                return False
+
+    return True
