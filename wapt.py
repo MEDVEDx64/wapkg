@@ -7,6 +7,7 @@ import os
 from sys import argv
 from wapkg import remote
 from wapkg.repo import Repository
+from wapkg.version import get_version
 
 help_msg = """
 Worms Armageddon Packaging Tool (wapt)
@@ -26,7 +27,9 @@ Manage multiple W:A versions (a.k.a. distributions) and easily add packages to t
 
 """ + argv[0] + """ init - create distro repository, if it isn't done yet (optional, only required in case \
 if you need to do some pre-configuration)
+
 """ + argv[0] + """ help - show this message and exit
+""" + argv[0] + """ version - show toolkit version and exit
 """
 
 
@@ -187,6 +190,9 @@ def main():
             out.sort()
             for x in out:
                 print(x)
+
+        elif cmd == 'version':
+            print(get_version())
 
         else:
             print_help()
