@@ -6,11 +6,11 @@
 import os
 
 from sys import argv, stdout, exc_info
+from wapkg import remote
 from socket import *
 from select import select
 from threading import Thread
 from wapkg.repo import Repository
-from wapkg.remote import fetch_index
 from wapkg.download import DownloadAction
 
 help_message = '''
@@ -49,21 +49,33 @@ class WQPacketHandler(object):
                 msg += d + '\n'
             send(msg)
 
-        def send_packages_available():
+        def send_packages_available(distro):
+            if distro not in self._repo.list_distributions():
+                return
+
             packages = {}
+            pkgs_bundle = []
+            dist_obj = self._repo.get_distribution(distro)
             for index in self._index_cache:
-                for pkg in index['packages']:
+                pkgs = index['packages']
+                pkgs_bundle.append(pkgs)
+                for pkg in pkgs:
                     rev = -1
-                    if 'revision' in index['packages'][pkg]:
-                        rev = index['packages'][pkg]['revision']
+                    pkg_ = remote.select_pkg(index['packages'][pkg], dist_obj.get_version_string())
+                    if not pkg_:
+                        continue
+                    if 'revision' in pkg_:
+                        rev = pkg_['revision']
                     if pkg in packages:
                         if rev > packages[pkg]:
                             packages[pkg] = rev
                     else:
                         packages[pkg] = rev
 
-            msg = 'quack!packages-available\n'
+            msg = 'quack!packages-available\ndistro/' + distro + '\n'
             for pkg in packages:
+                if not remote.trace_pkg_deps(pkgs_bundle, dist_obj.get_version_string(), pkg):
+                    continue
                 rev = 'virtual'
                 if packages[pkg] >= 0:
                     rev = str(packages[pkg])
@@ -97,7 +109,7 @@ class WQPacketHandler(object):
         def update_index():
             self._index_cache.clear()
             for src in self._repo.get_sources():
-                index = fetch_index(src)
+                index = remote.fetch_index(src)
                 if index:
                     self._index_cache.append(index)
 
@@ -220,7 +232,7 @@ class WQPacketHandler(object):
                     send_packages_changed(wqargs[1])
 
                 elif req == 'packages-available':
-                    send_packages_available()
+                    send_packages_available(wqargs[1])
 
                 elif req == 'dists':
                     send_dists_changed()
