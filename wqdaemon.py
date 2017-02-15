@@ -61,25 +61,31 @@ class WQPacketHandler(object):
                 pkgs_bundle.append(pkgs)
                 for pkg in pkgs:
                     rev = -1
+                    group = None
                     pkg_ = remote.select_pkg(index['packages'][pkg], dist_obj.get_version_string())
                     if not pkg_:
                         continue
                     if 'revision' in pkg_:
                         rev = pkg_['revision']
+                    if 'group' in pkg_:
+                        group = pkg_['group']
                     if pkg in packages:
                         if rev > packages[pkg]:
-                            packages[pkg] = rev
+                            packages[pkg] = (rev, group)
                     else:
-                        packages[pkg] = rev
+                        packages[pkg] = (rev, group)
 
             msg = 'quack!packages-available\ndistro/' + distro + '\n'
             for pkg in packages:
                 if not remote.trace_pkg_deps(pkgs_bundle, dist_obj.get_version_string(), pkg):
                     continue
                 rev = 'virtual'
-                if packages[pkg] >= 0:
-                    rev = str(packages[pkg])
-                msg += pkg + ':' + rev + '\n'
+                group = ''
+                if packages[pkg][0] >= 0:
+                    rev = str(packages[pkg][0])
+                if packages[pkg][1]:
+                    group = ':' + packages[pkg][1]
+                msg += pkg + ':' + rev + group + '\n'
 
             send(msg)
 

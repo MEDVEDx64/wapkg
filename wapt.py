@@ -108,7 +108,11 @@ def main():
             print('Okay.')
 
         elif cmd == 'dists':
+            dists = []
             for d in Repository().list_distributions():
+                dists.append(d)
+            dists.sort()
+            for d in dists:
                 print(d)
 
         elif cmd == 'packages':
@@ -117,9 +121,14 @@ def main():
                 print("Distribution '" + argv[2] + "' is not installed.")
                 return
 
+            packages = []
             dist = repo.get_distribution(argv[2])
             for pkg in dist.list_packages():
-                print(pkg + ', revision ' + str(dist.get_package_revision(pkg)))
+                packages.append(pkg + ', revision ' + str(dist.get_package_revision(pkg)))
+
+            packages.sort()
+            for pkg in packages:
+                print(pkg)
 
         elif cmd == 'dists-available':
             sources = Repository().get_sources()
@@ -132,6 +141,7 @@ def main():
                     if d not in dists:
                         dists.append(d)
 
+            dists.sort()
             for x in dists:
                 print(x)
 
@@ -165,13 +175,18 @@ def main():
                     else:
                         packages[pkg] = rev
 
+            out = []
             for x in packages:
                 if not remote.trace_pkg_deps(pkgs_bundle, dist.get_version_string(), x):
                     continue
                 rev_str = ', revision ' + str(packages[x])
                 if packages[x] < 0:
                     rev_str = ' (virtual package)'
-                print(x + rev_str)
+                out.append(x + rev_str)
+
+            out.sort()
+            for x in out:
+                print(x)
 
         else:
             print_help()
