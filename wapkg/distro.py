@@ -4,15 +4,14 @@ import errno
 import shutil
 import sqlite3
 
-from uuid import uuid4
-from zipfile import ZipFile
 from urllib.error import URLError
 from urllib.parse import urljoin
+from uuid import uuid4
+from zipfile import ZipFile
 
+from ._3rdparty.fileversion import calcversioninfo
 from . import remote
 from .download import Downloader
-
-from _3rdparty.fileversion import calcversioninfo
 
 
 class Distribution(object):
