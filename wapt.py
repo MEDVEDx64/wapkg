@@ -44,6 +44,10 @@ def main():
             print_help()
             return
 
+        elif cmd == '--version' or cmd == 'version':
+            print(get_version())
+            return
+
         elif cmd == 'init':
             Repository()
 
@@ -190,9 +194,6 @@ def main():
             out.sort()
             for x in out:
                 print(x)
-
-        elif cmd == 'version':
-            print(get_version())
 
         else:
             print_help()
