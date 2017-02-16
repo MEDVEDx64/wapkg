@@ -36,12 +36,13 @@ def select_pkg(pkg, vs):
             return None
 
         switch = pkg['switch']
-        if vs in switch:
-            return switch[vs]
-        elif '*' in switch:
+        for v in switch:
+            if vs in v.split(','):
+                return switch[v]
+
+        if '*' in switch:
             return switch['*']
-        else:
-            return None
+        return None
 
     return pkg
 
