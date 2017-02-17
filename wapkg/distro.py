@@ -88,7 +88,12 @@ class Distribution(object):
                     if n[-1] == '/':
                         is_dir = 1
 
-                    c.execute('INSERT INTO paths (path, dir, package) VALUES (?, ?, ?)', (n, is_dir, wapkg['name']))
+                    exist = False
+                    for f in c.execute('SELECT path FROM paths WHERE path=? LIMIT 1', (n,)):
+                        exist = True
+                        break
+                    if not exist:
+                        c.execute('INSERT INTO paths (path, dir, package) VALUES (?, ?, ?)', (n, is_dir, wapkg['name']))
                     zf.extract(n, self.wd)
 
                 conn.commit()
