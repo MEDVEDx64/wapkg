@@ -174,22 +174,28 @@ def main():
                     pkg_ = remote.select_pkg(index['packages'][pkg], dist.get_version_string())
                     if not pkg_:
                         continue
+                    group = None
+                    if 'group' in pkg_:
+                        group = pkg_['group']
                     if 'revision' in pkg_:
                         rev = pkg_['revision']
                     if pkg in packages:
                         if rev > packages[pkg]:
-                            packages[pkg] = rev
+                            packages[pkg] = (rev, group)
                     else:
-                        packages[pkg] = rev
+                        packages[pkg] = (rev, group)
 
             out = []
             for x in packages:
                 if not remote.trace_pkg_deps(pkgs_bundle, dist.get_version_string(), x):
                     continue
-                rev_str = ', revision ' + str(packages[x])
-                if packages[x] < 0:
+                rev_str = ', revision ' + str(packages[x][0])
+                group_str = ''
+                if packages[x][1]:
+                    group_str = '[' + packages[x][1] + '] '
+                if packages[x][0] < 0:
                     rev_str = ' (virtual package)'
-                out.append(x + rev_str)
+                out.append(group_str + x + rev_str)
 
             out.sort()
             for x in out:
