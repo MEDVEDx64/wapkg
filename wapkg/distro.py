@@ -24,11 +24,11 @@ class Distribution(object):
         self._version_string = None
 
         if not os.path.exists(self.repo):
-            raise RuntimeError('The path specified does not exist (or not a distro)')
+            raise RuntimeError('The path specified does not exist (not a distro?)')
 
         with open(os.path.join(self.repo, 'version'), 'r') as ver:
             if not int(ver.read()) == 1:
-                raise RuntimeError('Distribution version mismatch')
+                raise RuntimeError('Distro version mismatch')
 
         self.clean_cache()
 

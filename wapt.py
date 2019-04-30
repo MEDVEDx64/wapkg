@@ -18,15 +18,15 @@ Manage multiple W:A versions (a.k.a. distributions) and easily add packages to t
 """ + argv[0] + """ install <distro> [packages|files ...] - add package(s) to distro
 """ + argv[0] + """ remove <distro> [packages ...] - remove package(s) from distro
 """ + argv[0] + """ dist-install <distro|file> [suggested_name] - install new distro
-""" + argv[0] + """ dist-exterminate <distro> - uninstall distribution
+""" + argv[0] + """ dist-exterminate <distro> - uninstall distro
 
 """ + argv[0] + """ packages <distro> - list installed packages
 """ + argv[0] + """ packages-available <distro> - list packages available for download
 """ + argv[0] + """ dists - list installed distributions
-""" + argv[0] + """ dists-available - list distribution available for download
+""" + argv[0] + """ dists-available - list distros available for download
 
 """ + argv[0] + """ init - create distro repository, if it isn't done yet (optional, only required in case \
-if you need to do some pre-configuration)
+if you need to perform some pre-configuration)
 
 """ + argv[0] + """ help - show this message and exit
 """ + argv[0] + """ version - show toolkit version and exit

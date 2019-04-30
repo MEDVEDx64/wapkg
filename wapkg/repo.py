@@ -76,7 +76,7 @@ class Repository(object):
             dist_name = target
             target = os.path.join(self.wd, target)
             if os.path.exists(target):
-                return False, 'A distribution with such name is already exists', None
+                return False, 'A distribution with such name already exists', None
 
             repo = os.path.join(target, '.wadist')
             os.makedirs(os.path.join(repo, 'cache'))
@@ -108,7 +108,7 @@ class Repository(object):
         if target_name:
             target = target_name
         if os.path.exists(os.path.join(self.wd, target)):
-            return False, 'A distribution with such name is already exists', None
+            return False, 'A distribution with such name already exists', None
 
         for src in sources:
             index = remote.fetch_index(src)
