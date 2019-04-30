@@ -29,9 +29,8 @@ class Repository(object):
         if not os.path.exists(self.sf):
             with open(self.sf, 'w') as f:
                 settings = {
-                    'sources': [
-                        'https://themassacre.org/worms/'
-                    ]
+                    'sources': [],
+                    'disable_external_sources_list': False
                 }
                 if default_sources:
                     settings['sources'] = default_sources
@@ -48,6 +47,8 @@ class Repository(object):
         if 'path' in self.settings:
             self.wd = self.settings['path']
 
+        self._extrnl_flag = False
+
     def list_distributions(self):
         distro = []
         for d in os.listdir(self.wd):
@@ -60,6 +61,11 @@ class Repository(object):
         return Distribution(os.path.join(self.wd, name))
 
     def get_sources(self):
+        if not self._extrnl_flag:
+            self._extrnl_flag = True
+            if not ('disable_external_sources_list' in self.settings and self.settings['disable_external_sources_list']):
+                self.settings['sources'] += remote.fetch_external_sources()
+
         return self.settings['sources']
 
     # Returns: succeeded, message, distro name

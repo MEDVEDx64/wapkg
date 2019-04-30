@@ -5,6 +5,7 @@ from urllib.error import URLError
 from urllib.parse import urljoin
 
 VERSION_REQUIRED = 3
+EXTERNAL_LIST = 'https://pastebin.com/raw/aKjmATab'
 
 
 # Returns repo index dictionary object, or None in case of failure
@@ -24,6 +25,20 @@ def fetch_index(repo_url):
         return None
 
     return index
+
+
+def fetch_external_sources():
+    sources = []
+    try:
+        with urlopen(EXTERNAL_LIST) as lst_req:
+            for src in lst_req.read().decode('utf-8').split('\n'):
+                src_ = src.strip()
+                if len(src_) and not src_.startswith('#'):
+                    sources.append(src_)
+    except URLError:
+        pass
+
+    return sources
 
 
 # Unwraps the 'switch' content
