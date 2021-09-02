@@ -180,7 +180,7 @@ def main():
                     if 'revision' in pkg_:
                         rev = pkg_['revision']
                     if pkg in packages:
-                        if rev > packages[pkg]:
+                        if rev > packages[pkg][0]:
                             packages[pkg] = (rev, group)
                     else:
                         packages[pkg] = (rev, group)
